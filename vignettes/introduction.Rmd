@@ -1,0 +1,131 @@
+---
+title: "Introduction to the bara package"
+author: "Robin Gradin"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+set.seed(91827)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(foreach)
+library(doRNG)
+```
+
+# Batch Adjustment by Reference Alignment (BARA)
+
+## Introduction
+
+Data obtained using biological data acquisition techniques are often associated with batch effects.
+Batch effects can arise from a large variety of sources and can sometimes have
+detrimental impacts on subsequent analyses. Batch effects are especially troublesome
+in prediction problems where it is common to have a fixed prediction model for classifying
+subsequently acquired test samples. Thus, the training set and the test set are
+often completely correlated with batch, which can have a negative impact on the
+model's prediction performance.
+
+BARA is a method developed specifically for adjusting batch effects between 
+training sets and test sets in predictive settings using reference samples.
+Further, the method assumes that the variance important for making accurate predictions
+can be captured in a lower dimensional space defined by the singular vectors of
+the training set. Using a subset of the singular vectors containing the largest 
+fraction of variance, the adjustments between the training set and the test set
+is made in the compressed space spanned by the vectors. 
+
+This package is currently under construction, but the important functions
+are described below.
+
+## Main Functions
+
+The bara method is implemented by first creating a `BaraFit` object using the
+`bara_fit()` function. The function uses the training set to identify a set of
+singular vectors, where the number of vectors retained are based on either 
+the `ndim` or the `loss` parameters. The function returns a list of objects that 
+can be used in a subsequent step for adjusting test data. The returned list 
+contains the compressed input data in `fit$x`, which can be used to define a prediction model.
+
+```{r }
+library(bara)
+# Generate some "training data".
+x <- matrix(rnorm(4000), nrow = 40)
+# Define the index of the reference samples
+ref <- c(10, 30)
+# Only retain 10 dimensions of x.
+ndim = 10
+# Create the BaraFit object
+fit <- bara_fit(x = x, ref = ref, ndim = ndim, verbose = FALSE)
+head(fit$x[, 1:3], n = 3)
+```
+
+The adjustment of a test set can be made by using the `bara_adjust()` method.
+The function returns the adjusted test data that can be fed into the prediction model
+defined by the compressed training set.
+
+```{r }
+# Generate some test data and define the test reference samples
+x_test <- matrix(rnorm(2000), nrow = 20)
+ref_test <- c(5, 15)
+x_test_adjusted <- bara_adjust(bara_fit = fit, x = x_test, ref = ref_test)
+head(x_test_adjusted[, 1:3], n = 3)
+```
+
+Often, the optimal number of dimensions to retain can be optimized by testing.
+Therefore, the package also contains a function for estimating the optimal compression factor 
+(the number of dimensions to retain). Currently, the optimization can only be
+performed when both a training set and a test set exist. The method is implemented in the
+function `bara_optimize_ext()`. To allow flexibility, the 
+function requires the user to input functions for fitting a prediction model,
+classifying the test set and for evaluating the performance.
+
+```{r tidy.opts=TRUE}
+# Define response levels for the training set and the test set
+y <- factor(rep(c(1, 2), each = 20))  # For the training set
+y_test <- factor(rep(c(1, 2), each = 10))
+# Test the method with a kNN model.
+library(class)
+# Define the fit function f
+# The function must take the inputs: x, y and ...
+fit_f <- function(x, y, ...){
+  # Because the kNN function takes the training set and the test
+  # set as input simultaneously, the training set and the labels are 
+  # just bundled in a list.
+  list(
+    x = x,
+    y = y
+  )
+}
+# Define the prediction function
+# The required inputs are: object, x and ...
+pred_f <- function(object, x, ...){
+  knn(train = object$x, test = x, cl = object$y, k = 4)
+}
+
+# Finally, define the performance method by estimating accuracy.
+# Required arguments are: y, pred and ...
+perf_f <- function(y, pred, ...){
+  mean(y == pred) * 100
+}
+
+# Now, the optimization function can be run.
+opt_results <- bara_optimize_ext(
+  x_train = x,
+  ref_train = ref,
+  y_train = y,
+  x_test = x_test,
+  ref_test = ref_test,
+  y_test = y_test,
+  fit_fun = fit_f,
+  pred_fun = pred_f,
+  perf_fun = perf_f,
+  perf_objective = 'maximize',
+  verbose = FALSE
+)
+opt_results$best_dim
+```
