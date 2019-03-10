@@ -4,8 +4,7 @@ Title: Batch Adjustment By Reference Alignment
 Version: 0.1.0
 Author: Robin Gradin
 Maintainer: Robin Gradin <robin.gradin@somewhere.net>
-Description: An implementation of the BARA algorithm for adjust batch effects in 
-    prediction problems.
+Description: An implementation of the BARA algorithm for adjustment of batch effects in prediction problems.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
