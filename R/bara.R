@@ -275,14 +275,15 @@ get_right_vectors <- function(x, ndim, loss, verbose = TRUE){
     usv <- svd(x = x)
     right_vectors <- usv$v
     if (svd_param == 'loss') {
-      losses <- cumsum(usv$d^2 / sum(usv$d^2))
-      ndim <- which(losses >= loss)[1]
+      explained <- cumsum(usv$d^2 / sum(usv$d^2))
+      ndim <- which(explained >= (1 - loss))[1]
       right_vectors <- right_vectors[, seq(from = 1, to = ndim, by = 1)]
     }
   } else{
     usv <- svd(x = x, nv = ndim)
     right_vectors <- usv$v
   }
+  attr(right_vectors, 'explained_variance') <- cumsum(usv$d^2 / sum(usv$d^2))
   return(right_vectors)
 }
 
