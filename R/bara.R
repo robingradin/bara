@@ -203,6 +203,8 @@ check_batch <- function(batch, ref, n_samples){
         paste0(setdiff(unique_batches, unique_ref_batches), collapse = ', ')
       )
     }
+  } else{
+    batch <- rep('one_batch', n_samples)
   }
   return(batch)
 }
