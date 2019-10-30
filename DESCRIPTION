@@ -1,7 +1,7 @@
 Package: bara
 Type: Package
 Title: Batch Adjustment By Reference Alignment
-Version: 0.1.0
+Version: 0.1.1
 Author: Robin Gradin
 Maintainer: Robin Gradin <robin.gradin@somewhere.net>
 Description: An implementation of the BARA algorithm for adjustment of batch effects in prediction problems.
@@ -16,7 +16,8 @@ Imports: methods,
     parallel,
     purrr,
     class
-Suggests: testthat,
+Suggests: 
+    testthat (>= 2.1.0),
     knitr,
     rmarkdown
 VignetteBuilder: knitr

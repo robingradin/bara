@@ -4,7 +4,8 @@
 \alias{bara_adjust}
 \title{Adjusts a test set using the set of reference samples}
 \usage{
-bara_adjust(bara_fit, x, ref, batch = NULL, verbose = TRUE)
+bara_adjust(bara_fit, x, ref, batch = NULL, verbose = TRUE,
+  force = FALSE)
 }
 \arguments{
 \item{bara_fit}{Object of class BaraFit, created using the training set.}
@@ -19,6 +20,9 @@ supplied, each batch is independently adjusted. Therefore, each batch
 must contain at least 1 reference sample.}
 
 \item{verbose}{Logical, should runtime messages be printed? Default is TRUE.}
+
+\item{force}{Logical, should errors associated to the identification of 
+batches without reference samples be suppressed? Default is \code{FALSE}.}
 }
 \value{
 A matrix corresponding to the normalized test set.

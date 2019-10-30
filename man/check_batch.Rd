@@ -4,7 +4,7 @@
 \alias{check_batch}
 \title{Verifies the input format of the batch arguments.}
 \usage{
-check_batch(batch, ref, n_samples)
+check_batch(batch, ref, n_samples, force = FALSE)
 }
 \arguments{
 \item{batch}{Character/Numeric/Factor. The vector should represent
@@ -15,6 +15,9 @@ must contain at least 1 reference sample.}
 \item{ref}{Numeric vector, index of the reference samples in the test set.}
 
 \item{n_samples}{Numeric, number of samples in x.}
+
+\item{force}{Logical, should errors associated to the identification of 
+batches without reference samples be suppressed? Default is \code{FALSE}.}
 }
 \value{
 Character vector.

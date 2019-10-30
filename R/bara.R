@@ -70,9 +70,12 @@ bara_fit <- function(x, ref, ndim = NULL, loss = NULL,
 #'     supplied, each batch is independently adjusted. Therefore, each batch
 #'     must contain at least 1 reference sample.
 #' @param verbose Logical, should runtime messages be printed? Default is TRUE.
+#' @param force Logical, should errors associated to the identification of 
+#'     batches without reference samples be suppressed? Default is \code{FALSE}.
 #' @return A matrix corresponding to the normalized test set.
 #' @export
-bara_adjust <- function(bara_fit, x, ref, batch = NULL, verbose = TRUE){
+bara_adjust <- function(bara_fit, x, ref, batch = NULL, verbose = TRUE,
+                        force = FALSE){
   # Check input
   if (!methods::is(bara_fit, 'BaraFit')) {
     stop(
@@ -82,7 +85,8 @@ bara_adjust <- function(bara_fit, x, ref, batch = NULL, verbose = TRUE){
   }
   x <- check_matrix(x = x, verbose = verbose)
   ref <- check_ref(ref = ref, n_samples = nrow(x), verbose = verbose)
-  batch <- check_batch(batch = batch, ref = ref, n_samples = nrow(x))
+  batch <- check_batch(batch = batch, ref = ref, n_samples = nrow(x),
+                       force = force)
   if (any(colnames(x) != colnames(bara_fit$x))) {
     stop(
       'The colnames of x must correspond to the colnames of the training set',
@@ -184,8 +188,10 @@ check_ref <- function(ref, n_samples, verbose = TRUE){
 #'     must contain at least 1 reference sample.
 #' @param ref Numeric vector, index of the reference samples in the test set.
 #' @param n_samples Numeric, number of samples in x.
+#' @param force Logical, should errors associated to the identification of 
+#'     batches without reference samples be suppressed? Default is \code{FALSE}.
 #' @return Character vector.
-check_batch <- function(batch, ref, n_samples){
+check_batch <- function(batch, ref, n_samples, force = FALSE){
   if (!is.null(batch)) {
     batch <- as.character(batch)
     if (length(batch) != n_samples) {  # Correct length
@@ -194,14 +200,27 @@ check_batch <- function(batch, ref, n_samples){
         ' of samples in x.'
       )
     }
-    unique_batches <- unique(batch)
-    unique_ref_batches <- unique(batch[ref])
+    unique_batches <- unique(stats::na.omit(batch))
+    unique_ref_batches <- unique(stats::na.omit(batch[ref]))
     if (!all(unique_batches %in% unique_ref_batches)) {  # Refs in all batches
-      stop(
-        'Reference samples could not be found in every batch. The following',
-        ' batches were identified without reference samples: ',
-        paste0(setdiff(unique_batches, unique_ref_batches), collapse = ', ')
-      )
+        missing_batch <- setdiff(unique_batches, unique_ref_batches)
+        msg <- paste(
+          'Reference samples could not be found in every batch. The following',
+          ' batches were identified without reference samples: ',
+          paste0(missing_batch, collapse = ', '),
+          sep = ''
+        )
+      if (force) {
+        warning(
+          msg
+        )
+        idx_missing <- which(batch %in% missing_batch)
+        batch[idx_missing] <- NA_character_
+      } else {
+        stop(
+          msg
+        )
+      }
     }
   } else{
     batch <- rep('one_batch', n_samples)
@@ -359,12 +378,20 @@ reconstruct_data <- function(right_vectors, pcs) {
 adjust_test_set <- function(bara_fit, x, ref, batch){
   # Compress the test set.
   pcs <- compress_data(right_vectors = bara_fit$right_vectors, x = x)
+  # Ensure that missing values are not returned
+  if (any(is.na(batch))) {
+    idx_missing <- which(is.na(batch))
+    pcs[idx_missing, ] <- NA_real_
+  }
   # Adjust each batch independently
-  unique_batches <- unique(batch)
-  ref_lgl <- generate_ref_lgl(ref = ref, n_samples = nrow(x))
+  unique_batches <- unique(stats::na.omit(batch))
+  ref_lgl <- generate_lgl(true = ref, n_samples = nrow(x))
   for (i in seq_along(unique_batches)) {
     # Find index of the batch and the batch-specific reference samples
-    batch_idx <- batch == unique_batches[i]
+    batch_idx <- generate_lgl(
+      true = which(batch == unique_batches[i]),
+      n_samples = nrow(x)
+    )
     batch_ref_idx <- batch_idx & ref_lgl
     # Estimate batch values and correction factors
     batch_means <- colMeans(x = pcs[batch_ref_idx, , drop = FALSE])
@@ -383,15 +410,14 @@ adjust_test_set <- function(bara_fit, x, ref, batch){
   return(x_adjusted)
 }
 
-#' Generate a logical vector where TRUE represent the index of
-#' a reference sample
+#' Generate a logical vector from numeric vector
 #'
-#' @param ref Numeric vector, index of reference samples.
+#' @param true Numeric vector, index of true indices.
 #' @param n_samples Numeric, number of samples in the data (rows of matrix x).
 #' @return Logical vector where TRUE entries represent reference samples.
-generate_ref_lgl <- function(ref, n_samples){
+generate_lgl <- function(true, n_samples){
   lgl_vector <- rep(FALSE, n_samples)
-  lgl_vector[ref] <- TRUE
+  lgl_vector[true] <- TRUE
   return(lgl_vector)
 }
 

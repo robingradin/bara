@@ -50,11 +50,11 @@ test_that('correct method is found for SVD calculation.', {
 
 test_that('the logical vector representing reference samples is ok.', {
   expect_equal(
-    generate_ref_lgl(ref = c(1, 2, 3), 5),
+    generate_lgl(true = c(1, 2, 3), 5),
     expected = c(TRUE, TRUE, TRUE, FALSE, FALSE)
   )
   expect_equal(
-    generate_ref_lgl(ref = c(1, 2, 3, 4, 5), 5),
+    generate_lgl(true = c(1, 2, 3, 4, 5), 5),
     expected = rep(TRUE, 5)
   )
 })
